@@ -4,6 +4,7 @@ import random
 import time
 import pyglet
 import numpy as np
+import random
 
 
 '''Params begin'''
@@ -21,7 +22,7 @@ save_per_generation = 2
 show_population = True
 
 # Number of species per population
-species_per_population = 100
+species_per_population = 20
 
 # How many fittest species could survive
 # without reproduction
@@ -46,7 +47,7 @@ action2movetable = [[1, 1, 0], [1, 0, 0], [1, 0, 1]]
 
 # After how many episode, should be the track regenerated
 # -1 means never
-track_regeneration_per_episode = -1
+track_regeneration_per_episode = 5
 
 '''Params end'''
 
@@ -92,6 +93,8 @@ class MyGame(GameWindow):
         # if self.time is 0:
         self.states = self.get_states()
         actions = self.brain.act(self.states)
+        #actions = [[random.choice([0,1]), random.choice([0,1]), random.choice([0,1])] for i in range(100)]
+        #print(len(actions[0]))
         # self.states = []
         for idx, car in enumerate(self.get_cars()):
             if not car.died and not car.won:
@@ -100,7 +103,7 @@ class MyGame(GameWindow):
 
         # self.states = np.reshape(self.states, [1, len(self.states)])
 
-        if self.is_game_ended():
+        if self.is_game_ended() or self.time == 1000:
             if self.episode % save_per_generation == 0 and self.learn:
                 self.save_brain_of_fittest()
             if self.learn:
@@ -112,6 +115,10 @@ class MyGame(GameWindow):
             if track_regeneration_per_episode is not -1 and self.episode % track_regeneration_per_episode == 0:
                 self.track.GenTrack()
             self.reset()
+            id_no = 0
+            for car in self._handles:
+                car.id = id_no
+                id_no += 1
 
     # Helper functions
     def get_states(self):
@@ -135,6 +142,7 @@ class MyGame(GameWindow):
     def natural_selection(self):
         """Selects the fittest species from the population
         """
+        #print([ca.id for ca in self.get_cars()])
         self._calculate_fitness_sum(self.get_cars())
         fathers = []
         mothers = []
@@ -146,7 +154,7 @@ class MyGame(GameWindow):
 
         # Set best reward
         self.best_reward = best_car.last_reward
-
+        
         print("Generation {0} best fitness {1:0F}".format(self.episode,best_car.last_reward))
 
         fathers += best_species
@@ -158,7 +166,10 @@ class MyGame(GameWindow):
         keys = list(parents.keys())
         fathers += list({k:parents[k] for k in keys[:number_to_generate]}.values())
         mothers += list({k:parents[k] for k in keys[number_to_generate:2*number_to_generate]}.values())
+        print(fathers)
+        #print(mothers)
         self.brain.generate_new_weights(fathers,mothers)
+        print([ca.id for ca in self.get_cars()])
 
     def select_best_species(self,cars,number_of_best_species_to_select=1):
         """Selects best species from the population
@@ -178,7 +189,7 @@ class MyGame(GameWindow):
     def save_brain_of_fittest(self):
         """Saves the brain of the fittest
         """
-        cars = self.get_cars([1, species_per_population + 1])
+        cars = self.get_cars()
         fittest = self.select_best_species(cars)
         brain.save_model_by_id(fittest)
 
@@ -225,7 +236,7 @@ class MyGame(GameWindow):
 brain = Brain(len(ray_angles), action2movetable, species_per_population, learn, filename)
 
 # Creating the Game instance
-game = MyGame(show_population, 800, 600)
+game = MyGame(show_population, 1000, 1000)
 game.set_brain(brain)
 if learn:
     game.set_learning()
